@@ -155,26 +155,34 @@ export default function App() {
     }
   }
 
-  async function handleUrlSummarize(e) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setMessage("");
+async function handleUrlSummarize(e) {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setMessage("");
 
-    try {
-      const data = await apiFetch("/documents/url-summarize", {
-        method: "POST",
-        body: JSON.stringify({ url: urlInput }),
-      });
-      setMessage("URL resumida correctamente.");
-      await loadDocuments();
-      setSelectedId(data.id);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  let url = urlInput.trim();
+
+  // Añadir https:// automáticamente si el usuario no lo puso
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    url = "https://" + url;
   }
+
+  try {
+    const data = await apiFetch("/documents/url-summarize", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    });
+
+    setMessage("URL resumida correctamente.");
+    await loadDocuments();
+    setSelectedId(data.id);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
 
   async function handleResummarize(documentId) {
     setLoading(true);
