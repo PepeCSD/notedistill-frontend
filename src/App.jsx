@@ -155,6 +155,27 @@ export default function App() {
     }
   }
 
+  async function handleUrlSummarize(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
+
+    try {
+      const data = await apiFetch("/documents/url-summarize", {
+        method: "POST",
+        body: JSON.stringify({ url: urlInput }),
+      });
+      setMessage("URL resumida correctamente.");
+      await loadDocuments();
+      setSelectedId(data.id);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleResummarize(documentId) {
     setLoading(true);
     setError("");
@@ -187,7 +208,7 @@ export default function App() {
       <header className="hero">
         <div>
           <h1>NoteDistill</h1>
-          <p>Interfaz mínima funcional para login, resumen rápido y documentos.</p>
+          <p>Interfaz mínima funcional para login, resumen rápido, URL y documentos.</p>
         </div>
       </header>
 
@@ -247,6 +268,24 @@ export default function App() {
 
             <button type="submit" disabled={!token || loading}>
               {loading ? "Procesando..." : "Crear y resumir"}
+            </button>
+          </form>
+        </section>
+
+        <section className="card">
+          <h2>Resumir URL</h2>
+          <form onSubmit={handleUrlSummarize} className="stack">
+            <label>
+              URL
+              <input
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://..."
+              />
+            </label>
+
+            <button type="submit" disabled={!token || loading}>
+              {loading ? "Procesando..." : "Extraer y resumir URL"}
             </button>
           </form>
         </section>
