@@ -28,6 +28,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [urlInput, setUrlInput] = useState("https://example.com");
 
   const selectedDocument = useMemo(
     () => documents.find((doc) => doc.id === selectedId) || null,
