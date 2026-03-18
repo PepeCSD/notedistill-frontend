@@ -158,33 +158,56 @@ export default function App() {
     }
   }
 
-  async function handleUrlSummarize(e) {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setMessage("");
+async function handleAudioSummarize(e) {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setMessage("");
 
-    let url = urlInput.trim();
+  if (!audioFile) {
+    setError("Selecciona un archivo de audio.");
+    setLoading(false);
+    return;
+  }
 
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url;
-    }
+  try {
+    const formData = new FormData();
+    formData.append("file", audioFile);
+
+    const response = await fetch(`${API_BASE}/documents/audio-summarize`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const text = await response.text();
+    let data = null;
 
     try {
-      const data = await apiFetch("/documents/url-summarize", {
-        method: "POST",
-        body: JSON.stringify({ url }),
-      });
-
-      setMessage("URL resumida correctamente.");
-      await loadDocuments();
-      setSelectedId(data.id);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
     }
+
+    if (!response.ok) {
+      const detail =
+        typeof data === "object" && data?.detail
+          ? data.detail
+          : `Error ${response.status}`;
+      throw new Error(detail);
+    }
+
+    setMessage("Audio transcrito y resumido correctamente.");
+    await loadDocuments();
+    setSelectedId(data.id);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
   }
+}
 
   async function handleResummarize(documentId) {
     setLoading(true);
