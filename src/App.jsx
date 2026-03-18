@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const API_BASE = "https://app.notedistill.com/api/v1";
 
@@ -30,8 +30,6 @@ export default function App() {
   const [error, setError] = useState("");
   const [urlInput, setUrlInput] = useState("https://example.com");
   const [audioFile, setAudioFile] = useState(null);
-
-  const audioInputRef = useRef(null);
 
   const selectedDocument = useMemo(
     () => documents.find((doc) => doc.id === selectedId) || null,
@@ -158,71 +156,27 @@ export default function App() {
     }
   }
 
-async function handleAudioSummarize(e) {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
-  setMessage("");
-
-  if (!audioFile) {
-    setError("Selecciona un archivo de audio.");
-    setLoading(false);
-    return;
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append("file", audioFile);
-
-    const response = await fetch(`${API_BASE}/documents/audio-summarize`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    const text = await response.text();
-    let data = null;
-
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = text;
-    }
-
-    if (!response.ok) {
-      const detail =
-        typeof data === "object" && data?.detail
-          ? data.detail
-          : `Error ${response.status}`;
-      throw new Error(detail);
-    }
-
-    setMessage("Audio transcrito y resumido correctamente.");
-    await loadDocuments();
-    setSelectedId(data.id);
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-}
-
-  async function handleResummarize(documentId) {
+  async function handleUrlSummarize(e) {
+    e.preventDefault();
     setLoading(true);
     setError("");
     setMessage("");
 
+    let url = urlInput.trim();
+
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+
     try {
-      const data = await apiFetch(`/documents/${documentId}/summarize`, {
+      const data = await apiFetch("/documents/url-summarize", {
         method: "POST",
+        body: JSON.stringify({ url }),
       });
-      setDocuments((prev) =>
-        prev.map((doc) => (doc.id === documentId ? data : doc))
-      );
-      setSelectedId(documentId);
-      setMessage("Resumen regenerado.");
+
+      setMessage("URL resumida correctamente.");
+      await loadDocuments();
+      setSelectedId(data.id);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -274,12 +228,27 @@ async function handleAudioSummarize(e) {
       setMessage("Audio transcrito y resumido correctamente.");
       await loadDocuments();
       setSelectedId(data.id);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      setAudioFile(null);
+  async function handleResummarize(documentId) {
+    setLoading(true);
+    setError("");
+    setMessage("");
 
-      if (audioInputRef.current) {
-        audioInputRef.current.value = "";
-      }
+    try {
+      const data = await apiFetch(`/documents/${documentId}/summarize`, {
+        method: "POST",
+      });
+      setDocuments((prev) =>
+        prev.map((doc) => (doc.id === documentId ? data : doc))
+      );
+      setSelectedId(documentId);
+      setMessage("Resumen regenerado.");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -393,14 +362,13 @@ async function handleAudioSummarize(e) {
             <label>
               Archivo de audio
               <input
-                ref={audioInputRef}
                 type="file"
                 accept=".mp3,.wav,.m4a,.ogg,.mpeg,.mp4,.webm"
                 onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
               />
             </label>
 
-            <button type="submit" disabled={!token || loading || !audioFile}>
+            <button type="submit" disabled={!token || loading}>
               {loading ? "Procesando..." : "Transcribir y resumir audio"}
             </button>
           </form>
