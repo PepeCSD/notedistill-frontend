@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const API_BASE = "https://app.notedistill.com/api/v1";
 
@@ -30,6 +30,8 @@ export default function App() {
   const [error, setError] = useState("");
   const [urlInput, setUrlInput] = useState("https://example.com");
   const [audioFile, setAudioFile] = useState(null);
+
+  const audioInputRef = useRef(null);
 
   const selectedDocument = useMemo(
     () => documents.find((doc) => doc.id === selectedId) || null,
@@ -156,34 +158,33 @@ export default function App() {
     }
   }
 
-async function handleUrlSummarize(e) {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
-  setMessage("");
+  async function handleUrlSummarize(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
 
-  let url = urlInput.trim();
+    let url = urlInput.trim();
 
-  // Añadir https:// automáticamente si el usuario no lo puso
-  if (!url.startsWith("http://") && !url.startsWith("https://")) {
-    url = "https://" + url;
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+
+    try {
+      const data = await apiFetch("/documents/url-summarize", {
+        method: "POST",
+        body: JSON.stringify({ url }),
+      });
+
+      setMessage("URL resumida correctamente.");
+      await loadDocuments();
+      setSelectedId(data.id);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
-
-  try {
-    const data = await apiFetch("/documents/url-summarize", {
-      method: "POST",
-      body: JSON.stringify({ url }),
-    });
-
-    setMessage("URL resumida correctamente.");
-    await loadDocuments();
-    setSelectedId(data.id);
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-}
 
   async function handleResummarize(documentId) {
     setLoading(true);
@@ -207,56 +208,61 @@ async function handleUrlSummarize(e) {
   }
 
   async function handleAudioSummarize(e) {
-  e.preventDefault();
-  setLoading(true);
-  setError("");
-  setMessage("");
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
 
-  if (!audioFile) {
-    setError("Selecciona un archivo de audio.");
-    setLoading(false);
-    return;
-  }
-
-  try {
-    const formData = new FormData();
-    formData.append("file", audioFile);
-
-    const response = await fetch(`${API_BASE}/documents/audio-summarize`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    const text = await response.text();
-    let data = null;
+    if (!audioFile) {
+      setError("Selecciona un archivo de audio.");
+      setLoading(false);
+      return;
+    }
 
     try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = text;
-    }
+      const formData = new FormData();
+      formData.append("file", audioFile);
 
-    if (!response.ok) {
-      const detail =
-        typeof data === "object" && data?.detail
-          ? data.detail
-          : `Error ${response.status}`;
-      throw new Error(detail);
-    }
+      const response = await fetch(`${API_BASE}/documents/audio-summarize`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
 
-    setMessage("Audio transcrito y resumido correctamente.");
-    await loadDocuments();
-    setSelectedId(data.id);
-    setAudioFile(null);
-  } catch (err) {
-    setError(err.message);
-  } finally {
-    setLoading(false);
+      const text = await response.text();
+      let data = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = text;
+      }
+
+      if (!response.ok) {
+        const detail =
+          typeof data === "object" && data?.detail
+            ? data.detail
+            : `Error ${response.status}`;
+        throw new Error(detail);
+      }
+
+      setMessage("Audio transcrito y resumido correctamente.");
+      await loadDocuments();
+      setSelectedId(data.id);
+
+      setAudioFile(null);
+
+      if (audioInputRef.current) {
+        audioInputRef.current.value = "";
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
-}
 
   function handleLogout() {
     setToken("");
@@ -269,7 +275,10 @@ async function handleUrlSummarize(e) {
       <header className="hero">
         <div>
           <h1>NoteDistill</h1>
-          <p>Interfaz mínima funcional para login, resumen rápido, URL y documentos.</p>
+          <p>
+            Interfaz mínima funcional para login, resumen rápido, URL, audio y
+            documentos.
+          </p>
         </div>
       </header>
 
@@ -298,7 +307,11 @@ async function handleUrlSummarize(e) {
               <button type="submit" disabled={loading}>
                 {loading ? "Entrando..." : "Iniciar sesión"}
               </button>
-              <button type="button" className="secondary" onClick={handleLogout}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={handleLogout}
+              >
                 Salir
               </button>
             </div>
@@ -352,22 +365,23 @@ async function handleUrlSummarize(e) {
         </section>
 
         <section className="card">
-  <h2>Subir audio</h2>
-  <form onSubmit={handleAudioSummarize} className="stack">
-    <label>
-      Archivo de audio
-      <input
-        type="file"
-        accept=".mp3,.wav,.m4a,.ogg,.mpeg,.mp4,.webm"
-        onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
-      />
-    </label>
+          <h2>Subir audio</h2>
+          <form onSubmit={handleAudioSummarize} className="stack">
+            <label>
+              Archivo de audio
+              <input
+                ref={audioInputRef}
+                type="file"
+                accept=".mp3,.wav,.m4a,.ogg,.mpeg,.mp4,.webm"
+                onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+              />
+            </label>
 
-    <button type="submit" disabled={!token || loading || !audioFile}>
-      {loading ? "Procesando..." : "Transcribir y resumir audio"}
-    </button>
-  </form>
-</section>
+            <button type="submit" disabled={!token || loading || !audioFile}>
+              {loading ? "Procesando..." : "Transcribir y resumir audio"}
+            </button>
+          </form>
+        </section>
 
         <section className="card">
           <div className="row between">
