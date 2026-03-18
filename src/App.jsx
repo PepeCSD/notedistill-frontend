@@ -29,6 +29,7 @@ export default function App() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [urlInput, setUrlInput] = useState("https://example.com");
+  const [audioFile, setAudioFile] = useState(null);
 
   const selectedDocument = useMemo(
     () => documents.find((doc) => doc.id === selectedId) || null,
@@ -205,6 +206,58 @@ async function handleUrlSummarize(e) {
     }
   }
 
+  async function handleAudioSummarize(e) {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+  setMessage("");
+
+  if (!audioFile) {
+    setError("Selecciona un archivo de audio.");
+    setLoading(false);
+    return;
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("file", audioFile);
+
+    const response = await fetch(`${API_BASE}/documents/audio-summarize`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const text = await response.text();
+    let data = null;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+
+    if (!response.ok) {
+      const detail =
+        typeof data === "object" && data?.detail
+          ? data.detail
+          : `Error ${response.status}`;
+      throw new Error(detail);
+    }
+
+    setMessage("Audio transcrito y resumido correctamente.");
+    await loadDocuments();
+    setSelectedId(data.id);
+    setAudioFile(null);
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
   function handleLogout() {
     setToken("");
     setMessage("Sesión cerrada.");
@@ -297,6 +350,24 @@ async function handleUrlSummarize(e) {
             </button>
           </form>
         </section>
+
+        <section className="card">
+  <h2>Subir audio</h2>
+  <form onSubmit={handleAudioSummarize} className="stack">
+    <label>
+      Archivo de audio
+      <input
+        type="file"
+        accept=".mp3,.wav,.m4a,.ogg,.mpeg,.mp4,.webm"
+        onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+      />
+    </label>
+
+    <button type="submit" disabled={!token || loading || !audioFile}>
+      {loading ? "Procesando..." : "Transcribir y resumir audio"}
+    </button>
+  </form>
+</section>
 
         <section className="card">
           <div className="row between">
