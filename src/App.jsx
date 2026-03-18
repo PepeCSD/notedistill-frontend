@@ -146,7 +146,7 @@ export default function App() {
         method: "POST",
         body: JSON.stringify({ title, content }),
       });
-      setMessage("Documento creado y resumido.");
+      setMessage("Texto resumido correctamente.");
       await loadDocuments();
       setSelectedId(data.id);
     } catch (err) {
@@ -174,7 +174,7 @@ export default function App() {
         body: JSON.stringify({ url }),
       });
 
-      setMessage("URL resumida correctamente.");
+      setMessage("Enlace resumido correctamente.");
       await loadDocuments();
       setSelectedId(data.id);
     } catch (err) {
@@ -268,8 +268,8 @@ export default function App() {
         <div>
           <h1>NoteDistill</h1>
           <p>
-            Interfaz mínima funcional para login, resumen rápido, URL, audio y
-            documentos.
+            Convierte audios desordenados en transcripciones claras y resúmenes
+            útiles en segundos.
           </p>
         </div>
       </header>
@@ -316,48 +316,11 @@ export default function App() {
         </section>
 
         <section className="card">
-          <h2>Quick summarize</h2>
-          <form onSubmit={handleQuickSummarize} className="stack">
-            <label>
-              Título
-              <input value={title} onChange={(e) => setTitle(e.target.value)} />
-            </label>
+          <h2>Sube tu audio</h2>
+          <p className="muted">
+            Convierte un audio en transcripción y resumen en segundos.
+          </p>
 
-            <label>
-              Contenido
-              <textarea
-                rows="10"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-              />
-            </label>
-
-            <button type="submit" disabled={!token || loading}>
-              {loading ? "Procesando..." : "Crear y resumir"}
-            </button>
-          </form>
-        </section>
-
-        <section className="card">
-          <h2>Resumir URL</h2>
-          <form onSubmit={handleUrlSummarize} className="stack">
-            <label>
-              URL
-              <input
-                value={urlInput}
-                onChange={(e) => setUrlInput(e.target.value)}
-                placeholder="https://..."
-              />
-            </label>
-
-            <button type="submit" disabled={!token || loading}>
-              {loading ? "Procesando..." : "Extraer y resumir URL"}
-            </button>
-          </form>
-        </section>
-
-        <section className="card">
-          <h2>Subir audio</h2>
           <form onSubmit={handleAudioSummarize} className="stack">
             <label>
               Archivo de audio
@@ -439,6 +402,47 @@ export default function App() {
               )}
             </div>
           </div>
+        </section>
+
+        <section className="card">
+          <h2>Pegar enlace</h2>
+          <form onSubmit={handleUrlSummarize} className="stack">
+            <label>
+              URL
+              <input
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://..."
+              />
+            </label>
+
+            <button type="submit" disabled={!token || loading}>
+              {loading ? "Procesando..." : "Extraer y resumir enlace"}
+            </button>
+          </form>
+        </section>
+
+        <section className="card">
+          <h2>Pegar texto</h2>
+          <form onSubmit={handleQuickSummarize} className="stack">
+            <label>
+              Título
+              <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </label>
+
+            <label>
+              Contenido
+              <textarea
+                rows="10"
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+              />
+            </label>
+
+            <button type="submit" disabled={!token || loading}>
+              {loading ? "Procesando..." : "Resumir texto"}
+            </button>
+          </form>
         </section>
       </div>
     </div>
